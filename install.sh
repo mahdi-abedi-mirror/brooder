@@ -39,7 +39,7 @@ sudo chown -R www-data:www-data /opt/brooder_server
 
 # ── ۵. محیط مجازی Python ──────────────────────────────
 echo "[5/7] نصب وابستگی‌های Python..."
-sudo -u www-data python3.11 -m venv /opt/brooder_server/venv
+sudo -u www-data python3 -m venv /opt/brooder_server/venv
 sudo -u www-data /opt/brooder_server/venv/bin/pip install -q -r /opt/brooder_server/requirements.txt
 
 # ── ۶. فایل .env ──────────────────────────────────────
