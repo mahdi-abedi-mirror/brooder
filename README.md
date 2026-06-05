@@ -70,7 +70,7 @@ sudo ./install.sh
 ```bash
 # ۱. پیش‌نیازها
 sudo apt update
-sudo apt install -y python3.11 python3.11-venv postgresql redis-server
+sudo apt install -y python3 python3-venv postgresql redis-server
 
 # ۲. دیتابیس
 sudo -u postgres psql -c "CREATE USER brooder WITH PASSWORD 'your_password';"
