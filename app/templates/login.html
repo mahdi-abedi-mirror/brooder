@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ورود — گرم‌خانه جوجه اردک</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Tahoma, 'Segoe UI', sans-serif;
+    background: #f5f4f0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    direction: rtl;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid #e0ddd6;
+    border-radius: 16px;
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 380px;
+  }
+  .logo {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .logo .icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .logo h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+  .logo p {
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 6px;
+    margin-top: 16px;
+  }
+  input[type=text], input[type=password] {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: Tahoma, sans-serif;
+    outline: none;
+    transition: border-color .2s;
+    direction: ltr;
+  }
+  input[type=text]:focus, input[type=password]:focus {
+    border-color: #1D9E75;
+  }
+  button[type=submit] {
+    width: 100%;
+    margin-top: 24px;
+    padding: 12px;
+    background: #1D9E75;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: Tahoma, sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  button[type=submit]:hover { background: #0F6E56; }
+  .error {
+    background: #fff0f0;
+    border: 1px solid #f5c1c1;
+    color: #c0392b;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-top: 16px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <span class="icon">🐣</span>
+    <h1>گرم‌خانه جوجه اردک</h1>
+    <p>سیستم کنترل هوشمند</p>
+  </div>
+  <form method="post" action="/login">
+    <label for="username">نام کاربری</label>
+    <input type="text" id="username" name="username" autocomplete="username" required>
+    <label for="password">رمز عبور</label>
+    <input type="password" id="password" name="password" autocomplete="current-password" required>
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+    <button type="submit">ورود به داشبورد</button>
+  </form>
+</div>
+</body>
+</html>

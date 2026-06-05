@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>داشبورد — گرم‌خانه جوجه اردک</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Tahoma,'Segoe UI',sans-serif;background:#f5f4f0;direction:rtl;min-height:100vh}
+a{text-decoration:none;color:inherit}
+
+/* ── Layout ── */
+.topbar{background:#fff;border-bottom:1px solid #e0ddd6;padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;color:#1a1a1a}
+.topbar-logo span{font-size:22px}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.online-dot{width:8px;height:8px;border-radius:50%;background:#1D9E75;display:inline-block;animation:pulse 1.5s infinite}
+.online-dot.offline{background:#c0392b;animation:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.topbar-status{font-size:12px;color:#888}
+.logout-btn{font-size:12px;color:#c0392b;cursor:pointer;background:none;border:1px solid #f5c1c1;border-radius:8px;padding:5px 12px;font-family:Tahoma,sans-serif}
+.alarm-badge{background:#c0392b;color:#fff;border-radius:20px;font-size:11px;padding:2px 7px;font-weight:600}
+
+.nav{background:#fff;border-bottom:1px solid #e0ddd6;display:flex;gap:0;overflow-x:auto;padding:0 12px}
+.nav button{padding:12px 16px;border:none;background:none;font-size:13px;font-family:Tahoma,sans-serif;color:#888;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s,border-color .15s}
+.nav button.active{color:#1D9E75;border-bottom-color:#1D9E75;font-weight:600}
+.nav button:hover{color:#1D9E75}
+
+.content{max-width:720px;margin:0 auto;padding:18px 14px}
+
+/* ── Cards ── */
+.card{background:#fff;border:1px solid #e0ddd6;border-radius:14px;padding:16px;margin-bottom:14px}
+.card-title{font-size:13px;font-weight:600;color:#555;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+
+/* ── Metrics ── */
+.metrics-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.metric{background:#fff;border:1px solid #e0ddd6;border-radius:12px;padding:14px;text-align:center}
+.metric .m-label{font-size:12px;color:#888;margin-bottom:6px}
+.metric .m-val{font-size:26px;font-weight:600;color:#1a1a1a}
+.metric .m-val.hot{color:#c0392b}
+.metric .m-val.ok{color:#1D9E75}
+.metric .m-val.warn{color:#e67e22}
+.metric .m-sub{font-size:11px;color:#aaa;margin-top:4px}
+
+/* ── Relay rows ── */
+.relay-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f0ede6}
+.relay-row:last-child{border-bottom:none}
+.relay-info .r-name{font-size:14px;font-weight:500;color:#1a1a1a}
+.relay-info .r-sub{font-size:11px;color:#aaa;margin-top:2px}
+.badge{display:inline-block;font-size:12px;padding:3px 10px;border-radius:20px;font-weight:500}
+.badge.on{background:#eaf3de;color:#275a0a}
+.badge.off{background:#f1efe8;color:#888}
+.badge.alarm{background:#fdecea;color:#c0392b}
+.badge.warn{background:#fef5e7;color:#e67e22}
+
+/* ── Toggle switch ── */
+.toggle{position:relative;width:46px;height:26px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.slider{position:absolute;inset:0;background:#ccc;border-radius:13px;cursor:pointer;transition:.2s}
+.slider:before{content:'';position:absolute;width:20px;height:20px;right:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle input:checked+.slider{background:#1D9E75}
+.toggle input:checked+.slider:before{right:auto;left:3px}
+.toggle input:disabled+.slider{opacity:.5;cursor:not-allowed}
+
+/* ── Schedule table ── */
+.sched-table{width:100%;border-collapse:collapse}
+.sched-table th{font-size:12px;color:#888;font-weight:500;padding:6px 8px;text-align:right;border-bottom:1px solid #f0ede6}
+.sched-table td{padding:10px 8px;font-size:13px;border-bottom:1px solid #f0ede6;color:#1a1a1a}
+.sched-table tr:last-child td{border-bottom:none}
+.sched-table tr.current-period td{background:#f0faf5}
+.temp-pill{background:#faeeda;color:#633806;border-radius:20px;padding:3px 12px;font-size:13px;font-weight:500;display:inline-block}
+.edit-btn{background:none;border:1px solid #ddd;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;color:#555;font-family:Tahoma,sans-serif}
+.edit-btn:hover{border-color:#1D9E75;color:#1D9E75}
+
+/* ── Input rows (settings) ── */
+.input-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0ede6}
+.input-row:last-child{border-bottom:none}
+.input-row .i-label{font-size:13px;color:#444}
+.input-row .i-sub{font-size:11px;color:#aaa;margin-top:2px}
+.input-row input[type=number]{width:86px;padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:Tahoma,sans-serif;text-align:center;outline:none;direction:ltr}
+.input-row input[type=number]:focus{border-color:#1D9E75}
+.section-sub{font-size:13px;font-weight:600;color:#333;margin:14px 0 8px}
+
+/* ── Buttons ── */
+.btn-primary{background:#1D9E75;color:#fff;border:none;border-radius:10px;padding:11px 20px;font-size:14px;font-family:Tahoma,sans-serif;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-primary:hover{background:#0F6E56}
+.btn-primary:disabled{background:#aaa;cursor:not-allowed}
+.btn-outline{background:#fff;color:#1D9E75;border:1px solid #1D9E75;border-radius:10px;padding:9px 18px;font-size:13px;font-family:Tahoma,sans-serif;cursor:pointer}
+.btn-danger{background:#fff;color:#c0392b;border:1px solid #f5c1c1;border-radius:8px;padding:5px 12px;font-size:12px;font-family:Tahoma,sans-serif;cursor:pointer}
+.btn-full{width:100%;margin-top:14px}
+
+/* ── Chart ── */
+.chart-wrap{display:flex;align-items:flex-end;gap:3px;height:90px;padding:4px 0}
+.bar{background:#daeef8;border-radius:3px 3px 0 0;flex:1;min-height:4px;cursor:default;position:relative;transition:background .15s}
+.bar:hover{background:#378ADD}
+.bar.active{background:#378ADD}
+.chart-labels{display:flex;justify-content:space-between;font-size:11px;color:#aaa;margin-top:4px}
+
+/* ── Alarm items ── */
+.alarm-item{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 14px;background:#fef5f5;border:1px solid #f5c1c1;border-radius:10px;margin-bottom:8px;gap:10px}
+.alarm-item.resolved{background:#f8f8f8;border-color:#e0ddd6}
+.alarm-item .a-msg{font-size:13px;color:#c0392b;font-weight:500}
+.alarm-item.resolved .a-msg{color:#888}
+.alarm-item .a-time{font-size:11px;color:#aaa;margin-top:3px}
+
+/* ── Modal (edit schedule) ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;width:100%;max-width:380px}
+.modal h3{font-size:16px;font-weight:600;color:#1a1a1a;margin-bottom:18px}
+.modal label{display:block;font-size:12px;color:#888;margin-bottom:5px;margin-top:12px}
+.modal input{width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:Tahoma,sans-serif;direction:ltr;outline:none}
+.modal input:focus{border-color:#1D9E75}
+.modal-btns{display:flex;gap:8px;margin-top:20px}
+.modal-btns button{flex:1;padding:10px;border-radius:10px;font-size:14px;font-family:Tahoma,sans-serif;cursor:pointer;font-weight:500}
+
+/* ── Warning box ── */
+.warn-box{background:#fef9ee;border:1px solid #f9d77a;border-radius:10px;padding:10px 14px;font-size:13px;color:#7a5c00;margin-bottom:14px}
+
+/* ── Fan info rows ── */
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0ede6;font-size:13px}
+.info-row:last-child{border-bottom:none}
+.info-row .i-key{color:#666}
+.info-row .i-val{font-weight:500;color:#1a1a1a}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1D9E75;color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;font-family:Tahoma,sans-serif;z-index:999;display:none;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.toast.error{background:#c0392b}
+.toast.show{display:block;animation:fadeInUp .3s ease}
+@keyframes fadeInUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* ── Loader ── */
+.loader{display:inline-block;width:16px;height:16px;border:2px solid #ccc;border-top-color:#1D9E75;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-3px;margin-left:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Page visibility ── */
+.page{display:none}
+.page.active{display:block}
+
+/* ── Responsive ── */
+@media(max-width:480px){
+  .metrics-grid{grid-template-columns:repeat(2,1fr)}
+  .topbar-logo span{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <span>🐣</span>
+    گرم‌خانه جوجه اردک
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-status">
+      <span class="online-dot" id="online-dot"></span>
+      <span id="last-seen-label">در حال اتصال...</span>
+    </div>
+    <span id="alarm-badge-top" class="alarm-badge" style="display:none">0</span>
+    <button class="logout-btn" onclick="logout()">خروج</button>
+  </div>
+</div>
+
+<!-- Nav tabs -->
+<div class="nav">
+  <button class="active" onclick="showPage('home',this)">🏠 خانه</button>
+  <button onclick="showPage('relays',this)">🔌 رله‌ها</button>
+  <button onclick="showPage('schedule',this)">🕐 برنامه دما</button>
+  <button onclick="showPage('settings',this)">⚙️ تنظیمات</button>
+  <button onclick="showPage('alarms',this)" id="alarm-tab-btn">🔔 آلارم‌ها</button>
+</div>
+
+<!-- ════════ PAGE: HOME ════════ -->
+<div class="content">
+<div class="page active" id="page-home">
+
+  <div class="metrics-grid">
+    <div class="metric">
+      <div class="m-label">دمای فعلی</div>
+      <div class="m-val" id="m-temp">--°</div>
+      <div class="m-sub" id="m-temp-sub">در حال دریافت</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">دمای هدف</div>
+      <div class="m-val ok" id="m-target">--°</div>
+      <div class="m-sub" id="m-period">--</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">رطوبت</div>
+      <div class="m-val" id="m-hum">--%</div>
+      <div class="m-sub" id="m-hum-sub">--</div>
+    </div>
+    <div class="metric">
+      <div class="m-label">وضعیت</div>
+      <div class="m-val ok" id="m-status" style="font-size:18px">--</div>
+      <div class="m-sub" id="m-status-sub">--</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔌 وضعیت رله‌ها</div>
+    <div class="relay-row">
+      <div class="relay-info">
+        <div class="r-name">لامپ‌های ۲۰۰W</div>
+        <div class="r-sub">رله ۱ — گرمایش اصلی</div>
+      </div>
+      <span class="badge off" id="badge-ch1">خاموش</span>
+    </div>
+    <div class="relay-row">
+      <div class="relay-info">
+        <div class="r-name">لامپ ۱۰۰W</div>
+        <div class="r-sub">رله ۲ — گرمایش نگهداری</div>
+      </div>
+      <span class="badge off" id="badge-ch2">خاموش</span>
+    </div>
+    <div class="relay-row">
+      <div class="relay-info">
+        <div class="r-name">المنت اضطراری</div>
+        <div class="r-sub">رله ۳ — گرمایش اضطراری</div>
+      </div>
+      <span class="badge off" id="badge-ch3">خاموش</span>
+    </div>
+    <div class="relay-row">
+      <div class="relay-info">
+        <div class="r-name">فن سایلنت</div>
+        <div class="r-sub">رله ۴ — تهویه</div>
+      </div>
+      <span class="badge off" id="badge-ch4">خاموش</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 دما — ۱۲ ساعت اخیر</div>
+    <div class="chart-wrap" id="chart-bars"></div>
+    <div class="chart-labels">
+      <span>۱۲ ساعت پیش</span>
+      <span id="chart-min-label">--</span>
+      <span>الان</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════ PAGE: RELAYS ════════ -->
+<div class="page" id="page-relays">
+
+  <div class="warn-box">
+    ⚠️ کنترل دستی موقتی است. سیستم پس از ۳۰ ثانیه به حالت خودکار برمی‌گردد.
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔌 کنترل دستی رله‌ها</div>
+    <div class="relay-row">
+      <div class="relay-info">
+        <div class="r-name">لامپ‌های ۲۰۰W</div>
+        <div class="r-sub">رله ۱ — گرمایش اصلی</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-ch1" onchange="sendRelayCmd(1,this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="relay-row">
+      <div class="relay-info">
+        <div class="r-name">لامپ ۱۰۰W</div>
+        <div class="r-sub">رله ۲ — گرمایش نگهداری</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-ch2" onchange="sendRelayCmd(2,this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="relay-row">
+      <div class="relay-info">
+        <div class="r-name">المنت اضطراری</div>
+        <div class="r-sub">رله ۳ — گرمایش اضطراری</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-ch3" onchange="sendRelayCmd(3,this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="relay-row">
+      <div class="relay-info">
+        <div class="r-name">فن سایلنت</div>
+        <div class="r-sub">رله ۴ — تهویه و کنترل آمونیاک</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-ch4" onchange="sendRelayCmd(4,this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🌀 برنامه دوره‌ای فن (کنترل آمونیاک)</div>
+    <div class="info-row"><span class="i-key">وضعیت</span><span class="i-val" id="fan-enabled-label">--</span></div>
+    <div class="info-row"><span class="i-key">فاصله بین سیکل‌ها</span><span class="i-val" id="fan-interval-label">-- دقیقه</span></div>
+    <div class="info-row"><span class="i-key">مدت روشن بودن</span><span class="i-val" id="fan-duration-label">-- دقیقه</span></div>
+    <div class="info-row"><span class="i-key">در دمای اضطراری</span><span class="i-val" style="color:#c0392b">فن خاموش می‌ماند</span></div>
+    <button class="btn-outline btn-full" onclick="showPage('settings', document.querySelectorAll('.nav button')[3]); setTimeout(()=>document.getElementById('fan-section').scrollIntoView({behavior:'smooth'}),100)">
+      ویرایش برنامه فن
+    </button>
+  </div>
+
+</div>
+
+<!-- ════════ PAGE: SCHEDULE ════════ -->
+<div class="page" id="page-schedule">
+
+  <div class="card">
+    <div class="card-title">🕐 برنامه دمایی ۲۴ ساعته</div>
+    <table class="sched-table" id="sched-table">
+      <thead>
+        <tr>
+          <th>نام بازه</th>
+          <th>ساعت</th>
+          <th>هدف</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="sched-tbody">
+        <tr><td colspan="4" style="text-align:center;color:#aaa;padding:20px">در حال بارگذاری...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ════════ PAGE: SETTINGS ════════ -->
+<div class="page" id="page-settings">
+
+  <!-- رطوبت -->
+  <div class="card">
+    <div class="card-title">💧 تنظیمات رطوبت</div>
+    <div class="input-row">
+      <div><div class="i-label">حداقل رطوبت نرمال (%)</div></div>
+      <input type="number" id="s-hum-min" min="0" max="100" step="1">
+    </div>
+    <div class="input-row">
+      <div><div class="i-label">حداکثر رطوبت نرمال (%)</div></div>
+      <input type="number" id="s-hum-max" min="0" max="100" step="1">
+    </div>
+    <div class="input-row">
+      <div><div class="i-label">فن روشن شود بالای (%)</div></div>
+      <input type="number" id="s-hum-fan" min="0" max="100" step="1">
+    </div>
+    <div class="input-row">
+      <div><div class="i-label">آلارم رطوبت بالا (%)</div></div>
+      <input type="number" id="s-hum-alarm-high" min="0" max="100" step="1">
+    </div>
+    <div class="input-row">
+      <div><div class="i-label">آلارم رطوبت پایین (%)</div></div>
+      <input type="number" id="s-hum-alarm-low" min="0" max="100" step="1">
+    </div>
+    <button class="btn-primary btn-full" onclick="saveParams()">ذخیره تنظیمات رطوبت</button>
+  </div>
+
+  <!-- دمای اضطراری -->
+  <div class="card">
+    <div class="card-title">🌡️ دمای اضطراری</div>
+    <div class="input-row">
+      <div><div class="i-label">حد پایین اضطراری (°C)</div><div style="font-size:11px;color:#aaa">زیر این دما: همه گرماها روشن، فن خاموش</div></div>
+      <input type="number" id="s-temp-emg-low" min="15" max="40" step="0.5">
+    </div>
+    <div class="input-row">
+      <div><div class="i-label">حد بالای اضطراری (°C)</div><div style="font-size:11px;color:#aaa">بالای این دما: همه گرماها خاموش، فن روشن</div></div>
+      <input type="number" id="s-temp-emg-high" min="25" max="50" step="0.5">
+    </div>
+    <div class="input-row">
+      <div><div class="i-label">فعال‌سازی المنت — اختلاف (°C)</div><div style="font-size:11px;color:#aaa">وقتی دما این مقدار زیر هدف بود، المنت روشن شود</div></div>
+      <input type="number" id="s-elem-diff" min="0.5" max="10" step="0.5">
+    </div>
+    <div class="input-row">
+      <div><div class="i-label">تلورانس دما (°C)</div><div style="font-size:11px;color:#aaa">محدوده قابل قبول دور هدف</div></div>
+      <input type="number" id="s-temp-tol" min="0.1" max="5" step="0.1">
+    </div>
+    <button class="btn-primary btn-full" onclick="saveParams()">ذخیره تنظیمات دما</button>
+  </div>
+
+  <!-- فن دوره‌ای -->
+  <div class="card" id="fan-section">
+    <div class="card-title">🌀 برنامه دوره‌ای فن</div>
+    <div class="input-row">
+      <div><div class="i-label">فاصله بین سیکل‌ها (دقیقه)</div></div>
+      <input type="number" id="s-fan-interval" min="10" max="1440" step="10">
+    </div>
+    <div class="input-row">
+      <div><div class="i-label">مدت روشن بودن (دقیقه)</div></div>
+      <input type="number" id="s-fan-duration" min="1" max="60" step="1">
+    </div>
+    <div class="input-row">
+      <div><div class="i-label">فعال‌سازی دوره‌ای</div></div>
+      <label class="toggle">
+        <input type="checkbox" id="s-fan-enabled">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <button class="btn-primary btn-full" onclick="saveFanSchedule()">ذخیره برنامه فن</button>
+  </div>
+
+  <!-- نوتیفیکیشن -->
+  <div class="card">
+    <div class="card-title">🔔 نوتیفیکیشن تلگرام</div>
+    <div class="input-row">
+      <div><div class="i-label">ارسال آلارم به تلگرام</div></div>
+      <label class="toggle">
+        <input type="checkbox" id="s-notif-enabled">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <button class="btn-primary btn-full" onclick="saveParams()">ذخیره</button>
+  </div>
+
+</div>
+
+<!-- ════════ PAGE: ALARMS ════════ -->
+<div class="page" id="page-alarms">
+
+  <div class="card">
+    <div class="card-title">🚨 آلارم‌های فعال</div>
+    <div id="active-alarms-list">
+      <div style="text-align:center;color:#aaa;padding:20px;font-size:13px">در حال بارگذاری...</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="color:#888">✅ آلارم‌های حل‌شده (۲۴ ساعت اخیر)</div>
+    <div id="resolved-alarms-list">
+      <div style="text-align:center;color:#aaa;padding:16px;font-size:13px">--</div>
+    </div>
+  </div>
+
+</div>
+
+</div><!-- /content -->
+
+<!-- ════ Modal: Edit Schedule ════ -->
+<div class="modal-overlay" id="sched-modal">
+  <div class="modal">
+    <h3>ویرایش بازه دمایی</h3>
+    <input type="hidden" id="modal-sched-id">
+    <label>نام بازه</label>
+    <input type="text" id="modal-name">
+    <label>ساعت شروع (0-23)</label>
+    <input type="number" id="modal-start-h" min="0" max="23">
+    <label>دقیقه شروع</label>
+    <input type="number" id="modal-start-m" min="0" max="59" value="0">
+    <label>ساعت پایان (0-23)</label>
+    <input type="number" id="modal-end-h" min="0" max="23">
+    <label>دقیقه پایان</label>
+    <input type="number" id="modal-end-m" min="0" max="59" value="0">
+    <label>دمای هدف (°C)</label>
+    <input type="number" id="modal-temp" min="20" max="45" step="0.5">
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="saveSchedule()">ذخیره</button>
+      <button class="btn-outline" onclick="closeModal()">انصراف</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const ROOM_ID = 1;
+let schedules = [];
+let params = {};
+let fanSch = {};
+
+// ── Navigation ──────────────────────────────────────
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'alarms') loadAlarms();
+  if (name === 'schedule') renderSchedule();
+  if (name === 'settings') loadSettings();
+  if (name === 'relays') loadFanInfo();
+}
+
+// ── Toast ────────────────────────────────────────────
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type === 'error' ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ── Logout ───────────────────────────────────────────
+function logout() {
+  if (confirm('از داشبورد خارج می‌شوید؟')) {
+    window.location.href = '/logout';
+  }
+}
+
+// ── Fetch helpers ────────────────────────────────────
+async function api(url, method='GET', body=null) {
+  const opts = { method, headers: {'Content-Type': 'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// ── Status (real-time polling every 10s) ─────────────
+async function loadStatus() {
+  try {
+    const data = await api(`/api/v1/rooms/${ROOM_ID}/status`);
+    const dot = document.getElementById('online-dot');
+    const lbl = document.getElementById('last-seen-label');
+
+    if (data.last_seen) {
+      const diff = Math.round((Date.now() - new Date(data.last_seen + 'Z').getTime()) / 1000);
+      if (diff < 120) {
+        dot.className = 'online-dot';
+        lbl.textContent = diff < 60 ? `${diff} ثانیه پیش` : `${Math.round(diff/60)} دقیقه پیش`;
+      } else {
+        dot.className = 'online-dot offline';
+        lbl.textContent = 'آفلاین';
+      }
+    }
+
+    // metrics
+    const temp = data.last_temperature;
+    const hum = data.last_humidity;
+    const target = data.current_target_temp;
+
+    if (temp !== null && temp !== undefined) {
+      const el = document.getElementById('m-temp');
+      el.textContent = temp.toFixed(1) + '°';
+      el.className = 'm-val' + (temp < 27 ? ' hot' : temp > 36 ? ' hot' : ' ok');
+      document.getElementById('m-temp-sub').textContent = temp < (target||32) ? 'زیر هدف' : 'بالای هدف';
+    }
+    if (target !== null && target !== undefined) {
+      document.getElementById('m-target').textContent = target.toFixed(1) + '°';
+      document.getElementById('m-period').textContent = data.period_name || '--';
+    }
+    if (hum !== null && hum !== undefined) {
+      const hEl = document.getElementById('m-hum');
+      hEl.textContent = hum.toFixed(0) + '%';
+      hEl.className = 'm-val' + (hum > 70 || hum < 45 ? ' hot' : hum > 65 ? ' warn' : ' ok');
+      document.getElementById('m-hum-sub').textContent =
+        hum > 70 ? 'آلارم بالا!' : hum < 45 ? 'آلارم پایین!' : hum > 65 ? 'بالاتر از حد' : 'نرمال';
+    }
+
+    // relay badges
+    const rs = data.last_relay_state;
+    if (rs) {
+      for (let i = 1; i <= 4; i++) {
+        const b = document.getElementById(`badge-ch${i}`);
+        const t = document.getElementById(`toggle-ch${i}`);
+        const on = rs[`ch${i}`];
+        if (b) { b.textContent = on ? 'روشن' : 'خاموش'; b.className = 'badge ' + (on ? 'on' : 'off'); }
+        if (t) t.checked = on;
+      }
+    }
+
+    // alarms badge
+    const aCount = data.active_alarms || 0;
+    const topBadge = document.getElementById('alarm-badge-top');
+    topBadge.style.display = aCount > 0 ? 'inline' : 'none';
+    topBadge.textContent = aCount;
+    document.getElementById('alarm-tab-btn').textContent =
+      `🔔 آلارم‌ها` + (aCount > 0 ? ` (${aCount})` : '');
+
+    // status card
+    document.getElementById('m-status').textContent = data.active_alarms > 0 ? '⚠️' : '✅';
+    document.getElementById('m-status-sub').textContent = data.active_alarms > 0 ? `${data.active_alarms} آلارم فعال` : 'وضعیت نرمال';
+
+  } catch (e) {
+    document.getElementById('online-dot').className = 'online-dot offline';
+  }
+}
+
+// ── Chart ────────────────────────────────────────────
+async function loadChart() {
+  try {
+    const logs = await api(`/api/v1/rooms/${ROOM_ID}/logs?limit=72`);
+    if (!logs.length) return;
+    const recent = logs.slice(0, 24).reverse();
+    const temps = recent.map(l => l.temperature);
+    const min = Math.min(...temps);
+    const max = Math.max(...temps);
+    const range = max - min || 1;
+    const wrap = document.getElementById('chart-bars');
+    wrap.innerHTML = '';
+    temps.forEach((t, i) => {
+      const b = document.createElement('div');
+      b.className = 'bar' + (i === temps.length - 1 ? ' active' : '');
+      b.style.height = Math.round(15 + ((t - min) / range) * 68) + 'px';
+      b.title = t.toFixed(1) + '°C';
+      wrap.appendChild(b);
+    });
+    document.getElementById('chart-min-label').textContent =
+      `کمینه: ${min.toFixed(1)}° / بیشینه: ${max.toFixed(1)}°`;
+  } catch (e) {}
+}
+
+// ── Relay manual command ─────────────────────────────
+async function sendRelayCmd(ch, state) {
+  try {
+    await api(`/api/v1/rooms/${ROOM_ID}/relay/command`, 'POST', {
+      channel: ch,
+      state: state,
+      reason: 'دستور دستی از داشبورد',
+    });
+    showToast(`رله ${ch} ${state ? 'روشن' : 'خاموش'} شد`);
+  } catch (e) {
+    showToast('خطا در ارسال دستور', 'error');
+  }
+}
+
+// ── Fan info ─────────────────────────────────────────
+async function loadFanInfo() {
+  try {
+    fanSch = await api(`/api/v1/rooms/${ROOM_ID}/fan-schedule`);
+    document.getElementById('fan-enabled-label').textContent = fanSch.enabled ? 'فعال' : 'غیرفعال';
+    document.getElementById('fan-interval-label').textContent = fanSch.interval_minutes + ' دقیقه';
+    document.getElementById('fan-duration-label').textContent = fanSch.duration_minutes + ' دقیقه';
+  } catch(e) {}
+}
+
+// ── Schedule ─────────────────────────────────────────
+async function loadSchedules() {
+  try {
+    schedules = await api(`/api/v1/rooms/${ROOM_ID}/schedules`);
+  } catch(e) {}
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function renderSchedule() {
+  const tbody = document.getElementById('sched-tbody');
+  if (!schedules.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#aaa;padding:20px">برنامه‌ای ثبت نشده</td></tr>';
+    return;
+  }
+  const now = new Date();
+  const curMins = now.getHours() * 60 + now.getMinutes();
+  tbody.innerHTML = schedules.map(s => {
+    const start = s.start_hour * 60 + s.start_minute;
+    const end = s.end_hour * 60 + s.end_minute;
+    let isCurrent = start > end
+      ? (curMins >= start || curMins < end)
+      : (curMins >= start && curMins < end);
+    return `<tr class="${isCurrent ? 'current-period' : ''}">
+      <td>${s.period_name}${isCurrent ? ' <span style="font-size:10px;color:#1D9E75">● فعال</span>' : ''}</td>
+      <td style="direction:ltr;text-align:center">${pad(s.start_hour)}:${pad(s.start_minute)} — ${pad(s.end_hour)}:${pad(s.end_minute)}</td>
+      <td><span class="temp-pill">${s.target_temp}°C</span></td>
+      <td><button class="edit-btn" onclick="openModal(${s.id})">ویرایش</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function openModal(id) {
+  const s = schedules.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('modal-sched-id').value = id;
+  document.getElementById('modal-name').value = s.period_name;
+  document.getElementById('modal-start-h').value = s.start_hour;
+  document.getElementById('modal-start-m').value = s.start_minute;
+  document.getElementById('modal-end-h').value = s.end_hour;
+  document.getElementById('modal-end-m').value = s.end_minute;
+  document.getElementById('modal-temp').value = s.target_temp;
+  document.getElementById('sched-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('sched-modal').classList.remove('open');
+}
+
+async function saveSchedule() {
+  const id = document.getElementById('modal-sched-id').value;
+  const body = {
+    period_name: document.getElementById('modal-name').value,
+    start_hour: parseInt(document.getElementById('modal-start-h').value),
+    start_minute: parseInt(document.getElementById('modal-start-m').value),
+    end_hour: parseInt(document.getElementById('modal-end-h').value),
+    end_minute: parseInt(document.getElementById('modal-end-m').value),
+    target_temp: parseFloat(document.getElementById('modal-temp').value),
+  };
+  try {
+    await api(`/api/v1/schedules/${id}`, 'PATCH', body);
+    showToast('برنامه دمایی ذخیره شد ✓');
+    closeModal();
+    await loadSchedules();
+    renderSchedule();
+  } catch(e) {
+    showToast('خطا در ذخیره', 'error');
+  }
+}
+
+// ── Settings ─────────────────────────────────────────
+async function loadSettings() {
+  try {
+    params = await api(`/api/v1/rooms/${ROOM_ID}/parameters`);
+    document.getElementById('s-hum-min').value = params.humidity_normal_min;
+    document.getElementById('s-hum-max').value = params.humidity_normal_max;
+    document.getElementById('s-hum-fan').value = params.humidity_fan_on;
+    document.getElementById('s-hum-alarm-high').value = params.humidity_alarm_high;
+    document.getElementById('s-hum-alarm-low').value = params.humidity_alarm_low;
+    document.getElementById('s-temp-emg-low').value = params.temp_emergency_low;
+    document.getElementById('s-temp-emg-high').value = params.temp_emergency_high;
+    document.getElementById('s-elem-diff').value = params.element_activate_diff;
+    document.getElementById('s-temp-tol').value = params.temp_tolerance;
+    document.getElementById('s-notif-enabled').checked = params.notifications_enabled;
+    fanSch = await api(`/api/v1/rooms/${ROOM_ID}/fan-schedule`);
+    document.getElementById('s-fan-interval').value = fanSch.interval_minutes;
+    document.getElementById('s-fan-duration').value = fanSch.duration_minutes;
+    document.getElementById('s-fan-enabled').checked = fanSch.enabled;
+  } catch(e) {}
+}
+
+async function saveParams() {
+  const body = {
+    humidity_normal_min: parseFloat(document.getElementById('s-hum-min').value),
+    humidity_normal_max: parseFloat(document.getElementById('s-hum-max').value),
+    humidity_fan_on: parseFloat(document.getElementById('s-hum-fan').value),
+    humidity_alarm_high: parseFloat(document.getElementById('s-hum-alarm-high').value),
+    humidity_alarm_low: parseFloat(document.getElementById('s-hum-alarm-low').value),
+    temp_emergency_low: parseFloat(document.getElementById('s-temp-emg-low').value),
+    temp_emergency_high: parseFloat(document.getElementById('s-temp-emg-high').value),
+    element_activate_diff: parseFloat(document.getElementById('s-elem-diff').value),
+    temp_tolerance: parseFloat(document.getElementById('s-temp-tol').value),
+    notifications_enabled: document.getElementById('s-notif-enabled').checked,
+  };
+  try {
+    await api(`/api/v1/rooms/${ROOM_ID}/parameters`, 'PATCH', body);
+    showToast('تنظیمات ذخیره شد ✓');
+  } catch(e) {
+    showToast('خطا در ذخیره تنظیمات', 'error');
+  }
+}
+
+async function saveFanSchedule() {
+  const body = {
+    interval_minutes: parseInt(document.getElementById('s-fan-interval').value),
+    duration_minutes: parseInt(document.getElementById('s-fan-duration').value),
+    enabled: document.getElementById('s-fan-enabled').checked,
+  };
+  try {
+    await api(`/api/v1/rooms/${ROOM_ID}/fan-schedule`, 'PATCH', body);
+    showToast('برنامه فن ذخیره شد ✓');
+  } catch(e) {
+    showToast('خطا در ذخیره', 'error');
+  }
+}
+
+// ── Alarms ───────────────────────────────────────────
+async function loadAlarms() {
+  try {
+    const active = await api(`/api/v1/rooms/${ROOM_ID}/alarms?resolved=false`);
+    const resolved = await api(`/api/v1/rooms/${ROOM_ID}/alarms?resolved=true`);
+    const activeDiv = document.getElementById('active-alarms-list');
+    const resolvedDiv = document.getElementById('resolved-alarms-list');
+
+    if (!active.length) {
+      activeDiv.innerHTML = '<div style="text-align:center;color:#1D9E75;padding:20px;font-size:13px">✅ هیچ آلارم فعالی وجود ندارد</div>';
+    } else {
+      activeDiv.innerHTML = active.map(a => `
+        <div class="alarm-item">
+          <div>
+            <div class="a-msg">⚠️ ${a.message}</div>
+            <div class="a-time">${formatDate(a.created_at)}</div>
+          </div>
+          <button class="btn-danger" onclick="resolveAlarm(${a.id})">تأیید</button>
+        </div>`).join('');
+    }
+
+    const last24 = resolved.filter(a => {
+      const h = (Date.now() - new Date(a.created_at + 'Z').getTime()) / 3600000;
+      return h < 24;
+    });
+    if (!last24.length) {
+      resolvedDiv.innerHTML = '<div style="text-align:center;color:#aaa;padding:12px;font-size:13px">موردی در ۲۴ ساعت گذشته وجود ندارد</div>';
+    } else {
+      resolvedDiv.innerHTML = last24.map(a => `
+        <div class="alarm-item resolved">
+          <div>
+            <div class="a-msg">✓ ${a.message}</div>
+            <div class="a-time">${formatDate(a.created_at)}</div>
+          </div>
+        </div>`).join('');
+    }
+  } catch(e) {}
+}
+
+async function resolveAlarm(id) {
+  try {
+    await api(`/api/v1/alarms/${id}/resolve`, 'PATCH');
+    showToast('آلارم تأیید شد');
+    loadAlarms();
+    loadStatus();
+  } catch(e) {
+    showToast('خطا', 'error');
+  }
+}
+
+function formatDate(iso) {
+  try {
+    const d = new Date(iso + 'Z');
+    return d.toLocaleString('fa-IR', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
+  } catch { return iso; }
+}
+
+// ── Modal close on overlay click ─────────────────────
+document.getElementById('sched-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ── Init ─────────────────────────────────────────────
+async function init() {
+  await loadSchedules();
+  await loadStatus();
+  await loadChart();
+  setInterval(loadStatus, 10000);
+  setInterval(loadChart, 60000);
+}
+
+init();
+</script>
+</body>
+</html>

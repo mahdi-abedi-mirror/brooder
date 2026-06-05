@@ -1,0 +1,15 @@
+[Unit]
+Description=Brooder Control API Server
+After=network.target postgresql.service redis.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/brooder_server
+Environment="PATH=/opt/brooder_server/venv/bin"
+ExecStart=/opt/brooder_server/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
